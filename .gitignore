@@ -1,0 +1,29 @@
+*.annot
+*.a
+*.o
+*.cm*
+
+# ocamlbuild working directory
+_build/
+
+# ocamlbuild targets
+*.byte
+*.native
+
+# oasis generated files
+setup.data
+setup.log
+
+# others
+.depend
+configure
+mbc.opt
+Makefile
+autom4te.cache
+tmp
+*.pdf
+config.status
+*~
+\#*#
+*.log
+_olint

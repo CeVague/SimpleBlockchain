@@ -1,0 +1,7 @@
+S lib/**
+B lib/**
+
+FLG -short-paths
+FLG -strict-sequence
+
+PKG odate

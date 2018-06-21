@@ -1,1 +1,1 @@
-SimpleBlockchain
+projet-code-squelette
