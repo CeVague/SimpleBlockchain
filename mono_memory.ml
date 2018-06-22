@@ -7,6 +7,8 @@ open Helpers
 open Pervasives
 
 let main () =
+  Random.self_init();
+
   let genese = get_genesis.g_block.block_ctt in
 
 
@@ -15,7 +17,7 @@ let main () =
     if sufficient_pow block.b_pow hash then
       block
     else
-      let block = {block with b_nonce = block.b_nonce + 1} in 
+      let block = {block with b_nonce = Random.bits()} in 
       calcul_valid_hash block
   in
   
@@ -33,14 +35,14 @@ let main () =
 
     print_string "Block précédent :\n";
     print_string chaine;
-    print_string "\nHash :";
+    print_string "\nHash : ";
     print_string hash;
     print_string "\n\n";
 
     let (chaine, hash) = block_content_to_string result in
     print_string "Block suivant :\n";
     print_string chaine;
-    print_string "\nHash :";
+    print_string "\nHash : ";
     print_string hash;
     print_string "\n\n\n\n";
     print_newline ();
