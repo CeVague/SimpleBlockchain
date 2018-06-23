@@ -29,6 +29,8 @@ val transaction_to_string : Types.transaction -> string * string
 
 val list_trans_to_string : Types.trans_id list -> string
 
+val account_to_string : Types.account -> string * string
+
 val get_genesis : Types.genesis
 
 val block_content_to_string :

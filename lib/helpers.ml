@@ -82,6 +82,10 @@ let rec list_trans_to_string list_trans =
   | e::s -> " " ^ e ^ (list_trans_to_string s)
 
 
+let account_to_string account =
+  assert false
+
+
 let block_content_to_string b_content =
   let string_of_block =
     "previous " ^ string_of_int b_content.b_previous.b_level ^ "." ^ b_content.b_previous.b_id ^ "\n"
