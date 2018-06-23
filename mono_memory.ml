@@ -25,12 +25,7 @@ let main () =
   let rec next_block block =
     let (chaine, hash) = block_content_to_string block in
     let b_previous = {b_level = block.b_previous.b_level + 1 ; b_id = hash} in
-    let temp = {  b_previous = b_previous;
-                  b_miner = "monoblock_mem";
-                  b_pow = pow_challenge;
-                  b_date = Util.Date.now();
-                  b_nonce = 0;
-                  b_transactions = ["jesuisunelicorne"]} in
+    let temp = mk_block_content (Options.miner) ["jesuisunelicorne"] b_previous 0 pow_challenge in
     let result = calcul_valid_hash temp in
 
     print_string "Block précédent :\n";

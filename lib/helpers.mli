@@ -20,7 +20,7 @@ val empty_blockchain : Types.genesis -> Types.blockchain
 val mk_block_content :
   Types.miner_id ->
   Types.trans_id list ->
-  Types.block ->
+  Types.block_info ->
   Types.nonce ->
   Types.pow ->
   Types.block_content
