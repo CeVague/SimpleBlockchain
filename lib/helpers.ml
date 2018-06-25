@@ -114,6 +114,144 @@ let get_genesis =
     g_accounts = []}
 
 
+
+
+
+
+let random_transaction =
+  let rec generate_x_y n =
+    let x = Random.int 2 in
+    let y = Random.int n in
+    if x != y then (string_of_int x, string_of_int y) else generate_x_y n
+  in
+
+  let (x,y) = generate_x_y 4 in
+  let amount = Random.int 100 in
+  let fees = amount / 10 in
+
+  let trans = {t_id = ""; t_from = x; t_to = y; t_fees = fees; t_amount = amount} in
+  let (str,hash) = transaction_to_string trans  in
+  print_string (str ^ " : DONE");
+
+  {trans with t_id = hash}
+
+
+
+let empty_blockchain genesis =
+  {
+    genesis = genesis;
+    db = {
+      blocks = [];
+      trans = [];
+      pending_trans = [
+        random_transaction; 
+        random_transaction; 
+        random_transaction; 
+        random_transaction; 
+        random_transaction;
+      ];
+      accounts = [
+        {acc_id = "0"; acc_balance = 1000};
+        {acc_id = "1"; acc_balance = 1000};
+      ]
+    };
+    peers_db = Util.MS.empty
+  }
+
+let rec update_l_acc acc accounts = match accounts with 
+  | [] -> [acc]
+  | a :: tail -> if a.acc_id == acc.acc_id then acc :: tail 
+    else a :: update_l_acc acc tail
+
+let make_transaction trans accounts =
+  let rec update_acc_source accs = match accs with
+    | [] -> failwith "Account not found for transaction %s" trans.t_id
+    | acc :: tail -> if String.equal acc.acc_id trans.t_from then
+        if acc.acc_balance >= trans.t_amount+trans.t_fees then
+          {acc with acc_balance = acc.acc_balance - trans.t_amount+trans.t_fees}
+        else failwith "Not enough balance in account %s" acc.acc_id
+      else update_acc_source tail
+  in
+
+  let rec update_acc_dest accs = match accs with
+    | [] ->
+      begin
+        let account = {
+          acc_id = "acc_id_xxx";
+          acc_balance = trans.t_amount} in
+        account
+      end
+    | acc :: tail ->
+      if acc.acc_id == trans.t_to then
+        {acc with acc_balance = acc.acc_balance + trans.t_amount}
+      else update_acc_dest tail 
+  in
+
+  let updated_accs = update_l_acc (update_acc_source accounts) accounts in
+  update_l_acc (update_acc_dest updated_accs) updated_accs
+
+let rec add_blck_in_blcks b blocks =
+  match blocks with
+  | [] -> [b]
+  | t :: tail -> t :: add_blck_in_blcks b tail
+
+let rec add_tran_in_trans tran trans =
+  match trans with
+  | [] -> [tran]
+  | t :: tail -> t :: add_tran_in_trans tran tail
+
+let rec make_pending_transactions (*block*) db = 
+  match db.pending_trans with
+  | [] -> db
+  | trans :: tail -> 
+    (*let blcks = add_blck_in_blcks block db.blocks in*)
+    let trns = add_tran_in_trans trans db.trans in
+    let accs = make_transaction trans db.accounts in
+    make_pending_transactions (*block*) {blocks = db.blocks; trans = trns; pending_trans = tail; accounts = accs}
+
+let check_block_hash block =
+  let (str,hash) = block_content_to_string block.block_ctt  in
+  if String.equal hash block.block_info.b_id then true
+  else failwith "Invalid hash for block %s" block.block_info.b_id
+
+let check_trans_hash trans =
+  let (str,hash) = transaction_to_string trans  in
+  if String.equal hash trans.t_id then true
+  else failwith "Invalid hash for transaction %s" trans.t_id
+
+let rec find_trans tran_id trans = match trans with
+  | [] -> failwith "Transaction not found!"
+  | tran :: tail -> if tran_id == tran.t_id then tran
+    else find_trans tran_id tail
+
+let rec check_transactions t_list b_id =
+  match t_list with
+  | [] -> true
+  | tran :: tail ->
+    if true(*check_trans_hash (find_trans tran bc.db.trans)*) then
+      begin
+        check_transactions tail b_id
+      end
+    else failwith "Invalid transaction in block %s : %s" tran b_id 
+
+let check_block block parent =
+  let check_level =
+    if block.block_info.b_level = parent.block_info.b_level + 1
+    then true else failwith "Invalid level in block %s" block.block_info.b_id
+  in
+
+  check_transactions block.block_ctt.b_transactions block.block_info.b_id && check_block_hash block && check_level
+
 let check_chain_of_blocks b_list genesis =
-  (* TODO *)
-  assert false
+  let parent = genesis.g_block in
+  let rec check_b_list l =
+    match l with
+    | [] -> true
+    | block :: tail ->
+      begin
+        check_block block parent;
+        let parent = block in
+        check_b_list tail
+      end in
+
+  check_transactions genesis.g_block.block_ctt.b_transactions genesis.g_block.block_info.b_id && check_b_list b_list
