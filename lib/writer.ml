@@ -51,6 +51,9 @@ let write_account wdir acc =
 
 
 let save_database db wdir =
+
+  let _ = Sys.command ("rm -r " ^ (Helpers.transactions_dir wdir true)) in
+
   List.iter (write_block wdir) db.blocks;
   List.iter (write_trans wdir false) db.trans;
   List.iter (write_trans wdir true) db.pending_trans;

@@ -27,11 +27,15 @@ val mk_block_content :
 
 val transaction_to_string : Types.transaction -> string * string
 
-val list_trans_to_string : Types.trans_id list -> string
+val list_trans_id_to_string : Types.trans_id list -> string
+
+val list_trans_to_string : Types.transaction list -> string
 
 val account_to_string : Types.account -> string * string
 
 val get_genesis : Types.genesis
+
+val random_transaction : int -> Types.transaction
 
 val block_content_to_string :
   Types.block_content ->
@@ -40,3 +44,9 @@ val block_content_to_string :
 val check_chain_of_blocks : Types.block list -> Types.genesis -> bool
 
 val calcul_valid_hash : Types.block_content -> Types.block_content
+
+val check_valid_trans : Types.transaction -> Types.account list -> bool
+
+val acc_after_trans : Types.transaction -> Types.account list -> Types.account list
+
+val apply_pending_transactions : Types.transaction list -> Types.account list -> Types.transaction list -> Types.account list * Types.transaction list

@@ -34,7 +34,7 @@ let blocks_dir wdir =
 
 
 let transactions_dir wdir ~pending =
-  wdir ^ (if pending then "/pending-transactions" else "transactions")
+  wdir ^ (if pending then "/pending-transactions" else "/transactions")
 
 
 let accounts_dir wdir =
@@ -76,15 +76,23 @@ let transaction_to_string trans =
   (string_of_trans, hash_of_trans)
 
 
+let rec list_trans_id_to_string list_trans =
+  match list_trans with
+  | [] -> ""
+  | e::s -> " " ^ e ^ (list_trans_id_to_string s)
+
+
 let rec list_trans_to_string list_trans =
   match list_trans with
   | [] -> ""
-  | e::s -> " " ^ e ^ (list_trans_to_string s)
+  | e::s ->
+    let str, _ = transaction_to_string e in
+    " " ^ str ^ "\n" ^ (list_trans_to_string s)
 
 
 let account_to_string account =
   let string_of_acc = "id " ^ account.acc_id ^ "\n"
-  ^ "balance " ^ string_of_int account.acc_balance ^ "\n" in
+                      ^ "balance " ^ string_of_int account.acc_balance ^ "\n" in
   let hash_of_acc = hash_string string_of_acc in
   (string_of_acc, hash_of_acc)
 
@@ -97,7 +105,7 @@ let block_content_to_string b_content =
     ^ "pow " ^ string_of_int b_content.b_pow ^ "\n"
     ^ "date " ^ Util.Date.to_string b_content.b_date ^ "\n"
     ^ "nonce " ^ string_of_int b_content.b_nonce ^ "\n"
-    ^ "transactions" ^ list_trans_to_string b_content.b_transactions ^ "\n"
+    ^ "transactions" ^ list_trans_id_to_string b_content.b_transactions ^ "\n"
   in
   let hash_of_block = hash_string string_of_block in
   (string_of_block, hash_of_block)
@@ -122,20 +130,19 @@ let get_genesis =
 
 
 
-let random_transaction () =
-  let rec generate_x_y n =
-    let x = Random.int 2 in
-    let y = Random.int n in
-    if x != y then (string_of_int x, string_of_int y) else generate_x_y n
+let random_transaction nb_id =
+  let rec generate_x_y n_r n_n =
+    let x = Random.int n_r in
+    let y = Random.int n_n in
+    if x != y then (string_of_int x, string_of_int y) else generate_x_y n_r n_n
   in
 
-  let (x,y) = generate_x_y 4 in
+  let x, y = generate_x_y nb_id (nb_id+5) in
   let amount = Random.int 100 in
   let fees = amount / 10 in
 
   let trans = {t_id = ""; t_from = x; t_to = y; t_fees = fees; t_amount = amount} in
-  let (str,hash) = transaction_to_string trans  in
-  print_string (str ^ " : DONE\n\n");
+  let str, hash = transaction_to_string trans  in
 
   {trans with t_id = hash}
 
@@ -148,15 +155,15 @@ let empty_blockchain genesis =
       blocks = [genesis.g_block];
       trans = [];
       pending_trans = [
-        random_transaction (); 
-        random_transaction (); 
-        random_transaction (); 
-        random_transaction (); 
-        random_transaction ();
+        random_transaction 2; 
+        random_transaction 2; 
+        random_transaction 2; 
+        random_transaction 2; 
+        random_transaction 2; 
       ];
       accounts = [
-        {acc_id = "0"; acc_balance = 1000};
-        {acc_id = "1"; acc_balance = 1000};
+        {acc_id = "0"; acc_balance = 100};
+        {acc_id = "1"; acc_balance = 100};
       ]
     };
     peers_db = Util.MS.empty
@@ -268,3 +275,50 @@ let rec calcul_valid_hash block =
   else
     let block = {block with b_nonce = Random.bits()} in 
     calcul_valid_hash block
+
+
+
+let rec check_valid_trans trans acc =
+  match acc with
+  | [] -> false
+  | e::s when String.equal trans.t_from e.acc_id -> e.acc_balance >= (trans.t_fees + trans.t_amount)
+  | _::s -> check_valid_trans trans s
+
+
+let acc_after_trans trans acc =
+
+  let rec aux_to trans acc new_acc =
+    match acc with
+    | [] -> 
+      let e = {acc_id = trans.t_to; acc_balance = trans.t_amount} in
+      (e :: new_acc)
+    | e::s when String.equal trans.t_to e.acc_id ->
+      let e = {e with acc_balance = e.acc_balance + trans.t_amount} in
+      aux_to trans s (e :: new_acc)
+    | e::s -> aux_to trans s (e :: new_acc)
+  in
+
+  let rec aux_from trans acc new_acc =
+    match acc with
+    | [] -> new_acc
+    | e::s when String.equal trans.t_from e.acc_id ->
+      let e = {e with acc_balance = e.acc_balance - (trans.t_fees + trans.t_amount)} in
+      aux_from trans s (e :: new_acc)
+    | e::s -> aux_from trans s (e :: new_acc)
+  in
+
+  let acc = aux_from trans acc [] in
+  let acc = aux_to trans acc [] in
+  acc
+
+
+let rec apply_pending_transactions pend acc trans =
+  match pend with
+  | [] -> acc, trans
+  | e::s -> 
+    if check_valid_trans e acc then
+      let acc = acc_after_trans e acc in
+      let trans = e :: trans in
+      apply_pending_transactions s acc trans
+    else
+      apply_pending_transactions s acc trans
