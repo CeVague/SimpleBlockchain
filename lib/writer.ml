@@ -44,7 +44,7 @@ let write_account wdir acc =
   let text, hash = Helpers.account_to_string acc in
 
   let path_dir = Helpers.accounts_dir wdir in
-  let path_file = path_dir ^ "/" ^ hash in
+  let path_file = path_dir ^ "/" ^ acc.acc_id in
 
   safe_folder path_dir;
   write_file path_file text

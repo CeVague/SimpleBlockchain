@@ -83,7 +83,11 @@ let rec list_trans_to_string list_trans =
 
 
 let account_to_string account =
-  assert false
+  let string_of_acc = "id " ^ account.acc_id ^ "\n"
+  ^ "balance " ^ string_of_int account.acc_balance ^ "\n" in
+  let hash_of_acc = hash_string string_of_acc in
+  (string_of_acc, hash_of_acc)
+
 
 
 let block_content_to_string b_content =
@@ -103,7 +107,7 @@ let get_genesis =
   {
     g_block = 
       {
-        block_info = {b_level= -1 ; b_id = "---"};
+        block_info = {b_level= 0 ; b_id = "27f90419199d42318e4ac063ceaf8dfd"};
         block_ctt = {
           b_previous = {b_level= -1 ; b_id = "---"};
           b_miner = "God";
@@ -118,7 +122,7 @@ let get_genesis =
 
 
 
-let random_transaction =
+let random_transaction () =
   let rec generate_x_y n =
     let x = Random.int 2 in
     let y = Random.int n in
@@ -131,7 +135,7 @@ let random_transaction =
 
   let trans = {t_id = ""; t_from = x; t_to = y; t_fees = fees; t_amount = amount} in
   let (str,hash) = transaction_to_string trans  in
-  print_string (str ^ " : DONE");
+  print_string (str ^ " : DONE\n\n");
 
   {trans with t_id = hash}
 
@@ -141,14 +145,14 @@ let empty_blockchain genesis =
   {
     genesis = genesis;
     db = {
-      blocks = [];
+      blocks = [genesis.g_block];
       trans = [];
       pending_trans = [
-        random_transaction; 
-        random_transaction; 
-        random_transaction; 
-        random_transaction; 
-        random_transaction;
+        random_transaction (); 
+        random_transaction (); 
+        random_transaction (); 
+        random_transaction (); 
+        random_transaction ();
       ];
       accounts = [
         {acc_id = "0"; acc_balance = 1000};
@@ -249,9 +253,18 @@ let check_chain_of_blocks b_list genesis =
     | [] -> true
     | block :: tail ->
       begin
-        check_block block parent;
+        let _ = check_block block parent in
         let parent = block in
         check_b_list tail
       end in
 
   check_transactions genesis.g_block.block_ctt.b_transactions genesis.g_block.block_info.b_id && check_b_list b_list
+
+
+let rec calcul_valid_hash block =
+  let (chaine, hash) = block_content_to_string block in
+  if sufficient_pow block.b_pow hash then
+    block
+  else
+    let block = {block with b_nonce = Random.bits()} in 
+    calcul_valid_hash block
